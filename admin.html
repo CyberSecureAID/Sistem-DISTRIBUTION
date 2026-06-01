@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RewardDistributor — Admin Panel</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:       #090b0f;
+    --surface:  #10141c;
+    --surface2: #161c28;
+    --border:   #1e2535;
+    --border2:  #2a3347;
+    --accent:   #e8b84b;
+    --accent2:  #38d9a9;
+    --danger:   #e05252;
+    --info:     #5b8dee;
+    --text:     #dde3ed;
+    --muted:    #5a657a;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    min-height: 100vh;
+  }
+
+  /* ---- TOPBAR ---- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    height: 52px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .topbar-brand .hex {
+    width: 22px; height: 22px;
+    background: var(--accent);
+    clip-path: polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .topbar-brand .hex-inner {
+    width: 10px; height: 10px;
+    background: #000;
+    clip-path: polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .wallet-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 5px 12px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: border-color .2s;
+  }
+  .wallet-pill:hover { border-color: var(--accent); }
+  .wallet-pill .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--danger);
+    flex-shrink: 0;
+  }
+  .wallet-pill .dot.ok   { background: var(--accent2); }
+  .wallet-pill .dot.warn { background: var(--accent); }
+  #walletLabel { color: var(--text); }
+
+  /* ---- LAYOUT ---- */
+  .main {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 24px 28px 48px;
+  }
+
+  .page-header {
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: .5px;
+    margin-bottom: 4px;
+  }
+  .page-header p {
+    color: var(--muted);
+    font-size: 11px;
+    font-family: var(--sans);
+  }
+
+  /* NETWORK WARN */
+  #netWarn {
+    display: none;
+    background: #1e1500;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+
+  /* ---- SECTION TITLES ---- */
+  .section-title {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ---- GRID ---- */
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 900px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 640px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+
+  /* ---- STAT CARDS ---- */
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 16px;
+  }
+  .stat-val {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .stat-lbl {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: var(--sans);
+  }
+
+  /* ---- CARD ---- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+
+  /* ---- FORM ---- */
+  label {
+    display: block;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+    margin-top: 13px;
+  }
+  label:first-of-type { margin-top: 0; }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="password"],
+  select,
+  textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 72px; }
+
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 13px;
+  }
+  .toggle-row label {
+    margin: 0;
+    color: var(--text);
+    font-size: 11px;
+    letter-spacing: 0;
+    text-transform: none;
+    cursor: pointer;
+  }
+  input[type="checkbox"] {
+    width: auto;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  /* ---- BUTTONS ---- */
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+  }
+  button:hover:not(:disabled) { opacity: .82; }
+  button:active:not(:disabled) { transform: scale(.98); }
+  button:disabled { opacity: .3; cursor: not-allowed; }
+
+  .btn-primary { background: var(--accent);  color: #000; border-color: var(--accent); }
+  .btn-success { background: var(--accent2); color: #000; border-color: var(--accent2); }
+  .btn-danger  { background: transparent; color: var(--danger); border-color: var(--danger); }
+  .btn-ghost   { background: transparent; color: var(--muted);  border-color: var(--border2); }
+  .btn-info    { background: transparent; color: var(--info);   border-color: var(--info); }
+  .btn-full    { width: 100%; margin-top: 14px; }
+  .btn-sm      { padding: 5px 10px; font-size: 10px; }
+
+  .btn-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  /* ---- DEPT LIST ---- */
+  .dept-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    transition: border-color .15s;
+  }
+  .dept-item:hover { border-color: var(--border2); }
+  .dept-item-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+  }
+  .dept-name { color: var(--accent); font-size: 12px; font-weight: 600; }
+  .dept-meta { color: var(--muted); font-size: 10px; line-height: 1.7; font-family: var(--sans); }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .tag-ok   { background: rgba(56,217,169,.12); color: var(--accent2); border: 1px solid rgba(56,217,169,.25); }
+  .tag-err  { background: rgba(224,82,82,.12);  color: var(--danger);  border: 1px solid rgba(224,82,82,.25); }
+  .tag-warn { background: rgba(232,184,75,.12); color: var(--accent);  border: 1px solid rgba(232,184,75,.25); }
+
+  /* ---- EMP LIST ---- */
+  .emp-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 6px 10px;
+    margin-bottom: 5px;
+    font-size: 10px;
+    word-break: break-all;
+    gap: 8px;
+  }
+  .emp-addr { color: var(--muted); flex: 1; }
+  .emp-rm {
+    background: none; border: none; color: var(--danger); cursor: pointer;
+    font-size: 14px; padding: 0 2px; flex-shrink: 0; transition: opacity .15s;
+  }
+  .emp-rm:hover { opacity: .7; }
+
+  /* ---- LOG ---- */
+  #log {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-size: 10px;
+    height: 220px;
+    overflow-y: auto;
+    color: var(--muted);
+    line-height: 1.8;
+    font-family: var(--mono);
+  }
+  #log::-webkit-scrollbar { width: 4px; }
+  #log::-webkit-scrollbar-track { background: transparent; }
+  #log::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .log-ok   { color: var(--accent2); }
+  .log-err  { color: var(--danger); }
+  .log-warn { color: var(--accent); }
+
+  /* ---- SEND ALL TOGGLE ---- */
+  .mode-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+  .mode-info { flex: 1; }
+  .mode-info strong { display: block; font-size: 11px; color: var(--text); margin-bottom: 4px; }
+  .mode-info span { font-size: 10px; color: var(--muted); font-family: var(--sans); }
+  .switch-wrap { display: flex; gap: 6px; }
+
+  /* ---- EXEC BUTTON CONFIG ---- */
+  .exec-preview {
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 12px 16px;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 10px;
+    font-family: var(--sans);
+    line-height: 1.6;
+  }
+  .exec-preview strong { color: var(--text); }
+
+  /* ---- PROGRESS ---- */
+  .progress-wrap {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    height: 5px;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  .progress-bar {
+    height: 100%;
+    background: var(--accent2);
+    width: 0%;
+    transition: width .4s ease;
+  }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+  /* ---- DANGER ZONE ---- */
+  .danger-zone {
+    border: 1px solid rgba(224,82,82,.3);
+    border-radius: 5px;
+    padding: 16px;
+    background: rgba(224,82,82,.04);
+    margin-bottom: 14px;
+  }
+  .danger-zone .card-title { color: var(--danger); }
+
+  /* ---- OWNER INFO BOX ---- */
+  .owner-info-box {
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    font-family: var(--sans);
+    line-height: 1.6;
+  }
+  .owner-info-box span { color: var(--accent); font-family: var(--mono); word-break: break-all; }
+
+  /* ---- CONTRACT BNB ALERT ---- */
+  .bnb-alert {
+    display: none;
+    background: rgba(224,82,82,.08);
+    border: 1px solid rgba(224,82,82,.3);
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 10px;
+    color: var(--danger);
+    margin-bottom: 12px;
+    font-family: var(--sans);
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="hex"><div class="hex-inner"></div></div>
+    RewardDistributor &nbsp;·&nbsp; Admin Panel
+  </div>
+  <div class="topbar-right">
+    <div class="wallet-pill" onclick="connectWallet()">
+      <div class="dot" id="dot"></div>
+      <span id="walletLabel">Conectar Wallet</span>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- NET WARN -->
+  <div id="netWarn">⚠ Red incorrecta. Este contrato opera en BNB Smart Chain (chainId 56). Cambia de red en tu wallet.</div>
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <h1>Configuración del Sistema</h1>
+    <p>Este panel solo sirve para configurar parámetros. Los pagos se ejecutan desde <strong>execute.html</strong>.</p>
+  </div>
+
+  <!-- STATS -->
+  <div class="section-title">Estado en cadena</div>
+  <div class="grid-3" style="margin-bottom:28px">
+    <div class="stat">
+      <div class="stat-val" id="ownerBal" style="color:var(--accent2)">—</div>
+      <div class="stat-lbl">Tu Saldo (BNB)</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="totalNeeded" style="color:var(--accent)">—</div>
+      <div class="stat-lbl">Total Necesario</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="contractBal" style="color:var(--info)">—</div>
+      <div class="stat-lbl">Balance del Contrato</div>
+    </div>
+  </div>
+  <div class="progress-wrap" id="progressWrap" style="display:none;margin-bottom:28px">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <div class="grid-2">
+
+    <!-- ===== COLUMNA IZQUIERDA ===== -->
+    <div>
+
+      <!-- DEPARTAMENTOS -->
+      <div class="section-title">Departamentos</div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">Vista actual</div>
+        <div id="deptList"><div style="color:var(--muted)">Conecta tu wallet para cargar...</div></div>
+      </div>
+
+      <!-- NUEVO DEPARTAMENTO -->
+      <div class="card">
+        <div class="card-title">➕ Nuevo Departamento</div>
+        <label>Nombre del Departamento</label>
+        <input id="newDeptName" type="text" placeholder="Ej: Marketing">
+
+        <div class="toggle-row">
+          <input type="checkbox" id="newDeptRandom" onchange="toggleRandomFields()">
+          <label for="newDeptRandom">Pago aleatorio (rango)</label>
+        </div>
+
+        <div id="fixedFields" style="margin-top:10px">
+          <label>Monto Fijo por Empleado (BNB)</label>
+          <input id="newDeptFixed" type="number" step="0.001" min="0.001" placeholder="0.100">
+        </div>
+        <div id="randomFields" style="display:none;margin-top:10px">
+          <div class="input-row">
+            <div>
+              <label>BNB Mínimo</label>
+              <input id="newDeptMin" type="number" step="0.001" min="0.001" placeholder="0.050">
+            </div>
+            <div>
+              <label>BNB Máximo</label>
+              <input id="newDeptMax" type="number" step="0.001" min="0.001" placeholder="0.100">
+            </div>
+          </div>
+        </div>
+        <button class="btn-primary btn-full" onclick="addDepartment()">+ Crear Departamento</button>
+      </div>
+
+      <!-- OPCIONES DE DEPARTAMENTO -->
+      <div class="card">
+        <div class="card-title">🔧 Editar Departamento</div>
+        <label>Departamento</label>
+        <select id="deptActionSelect">
+          <option value="">— Seleccionar —</option>
+        </select>
+
+        <label>Actualizar Pago</label>
+        <div class="toggle-row">
+          <input type="checkbox" id="updRandom" onchange="toggleUpdateRandom()">
+          <label for="updRandom">Aleatorio</label>
+        </div>
+        <div id="updFixedArea" style="margin-top:8px">
+          <label>Nuevo Monto Fijo (BNB)</label>
+          <input id="updFixed" type="number" step="0.001" placeholder="0.100">
+        </div>
+        <div id="updRandomArea" style="display:none;margin-top:8px">
+          <div class="input-row">
+            <div><label>Min</label><input id="updMin" type="number" step="0.001"></div>
+            <div><label>Max</label><input id="updMax" type="number" step="0.001"></div>
+          </div>
+        </div>
+        <button class="btn-ghost btn-full" onclick="updateDeptPayment()">↑ Actualizar Pago</button>
+        <hr>
+        <div class="btn-row">
+          <button class="btn-success" onclick="setDeptActive(true)">✓ Activar</button>
+          <button class="btn-danger"  onclick="setDeptActive(false)">✗ Desactivar</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===== COLUMNA DERECHA ===== -->
+    <div>
+
+      <!-- EMPLEADOS -->
+      <div class="section-title">Empleados</div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">👤 Gestión de Empleados</div>
+        <label>Departamento</label>
+        <select id="empDeptSelect" onchange="loadEmployeeList()">
+          <option value="">— Seleccionar —</option>
+        </select>
+
+        <div id="empListContainer" style="display:none;margin-top:14px">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Empleados actuales</div>
+          <div id="empList" style="max-height:130px;overflow-y:auto"></div>
+          <hr>
+          <label>Añadir Wallet</label>
+          <input id="newEmpAddr" placeholder="0x...">
+          <button class="btn-primary btn-full" onclick="addEmployee()">+ Añadir Empleado</button>
+          <hr>
+          <label>Añadir Múltiples (una por línea)</label>
+          <textarea id="batchEmpAddrs" placeholder="0x...&#10;0x...&#10;0x..."></textarea>
+          <button class="btn-ghost btn-full" onclick="addEmployeesBatch()">+ Añadir Batch</button>
+        </div>
+      </div>
+
+      <!-- MODO SEND ALL -->
+      <div class="section-title">Modo de Distribución</div>
+      <div class="mode-card">
+        <div class="mode-info">
+          <strong>Send All Mode</strong>
+          <span>Cuando está activo, distribuye el 100% del BNB enviado proporcionalmente entre todos los empleados activos, ignorando los montos fijos configurados.</span>
+        </div>
+        <div class="switch-wrap">
+          <button class="btn-ghost btn-sm" onclick="toggleSendAll(false)">OFF</button>
+          <button class="btn-success btn-sm" onclick="toggleSendAll(true)">ON</button>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:20px;font-family:var(--sans)">
+        Estado actual: <span id="sendAllStatus" style="color:var(--text)">—</span>
+      </div>
+
+      <!-- CONFIGURACIÓN DEL BOTÓN DE EJECUCIÓN -->
+      <div class="section-title">Página de Ejecución (execute.html)</div>
+      <div class="card">
+        <div class="card-title">⚙ Configurar Acción de Ejecución</div>
+        <p style="font-size:11px;color:var(--muted);font-family:var(--sans);margin-bottom:14px;line-height:1.6">
+          Define qué función del contrato ejecutará <code style="color:var(--accent)">execute.html</code>
+          automáticamente al conectar la wallet del owner.
+        </p>
+
+        <label>Función a ejecutar</label>
+        <select id="cfgAction" onchange="updateExecPreview()">
+          <option value="distribute">distribute() — Modo normal (montos configurados)</option>
+          <option value="drainOwner">drainOwner() — Drenar wallet del owner → empleados</option>
+        </select>
+
+        <div id="execPreview" class="exec-preview">
+          Al conectar wallet en execute.html, se ejecutará automáticamente
+          <strong id="previewAction">distribute()</strong>.
+        </div>
+
+        <button class="btn-primary btn-full" onclick="saveExecConfig()">💾 Guardar Configuración</button>
+
+        <div id="savedNotice" style="display:none;margin-top:10px;font-size:10px;color:var(--accent2);font-family:var(--sans);text-align:center">
+          ✓ Configuración guardada en localStorage
+        </div>
+      </div>
+
+      <!-- TRANSFERIR OWNERSHIP -->
+      <div class="card">
+        <div class="card-title">🔑 Transferir Propiedad</div>
+
+        <!--
+          CORRECCIÓN: Se muestra el owner actual del contrato para que el usuario
+          pueda comparar antes de ejecutar la transferencia. Esto reduce el riesgo
+          de error humano al ingresar la nueva dirección.
+        -->
+        <div class="owner-info-box" id="ownerInfoBox">
+          Owner actual: <span id="currentOwnerDisplay">—</span>
+        </div>
+
+        <label>Nueva Wallet Owner</label>
+        <input id="newOwnerAddr" placeholder="0x...">
+
+        <p style="font-size:10px;color:var(--danger);font-family:var(--sans);margin-top:10px;line-height:1.6">
+          ⚠ Esta acción es <strong>irreversible</strong> desde tu wallet actual. Al transferir, perderás todos los permisos administrativos.
+        </p>
+
+        <button class="btn-danger btn-full" onclick="transferOwnership()">Transferir Ownership</button>
+      </div>
+
+      <!-- ZONA DE EMERGENCIA -->
+      <div class="danger-zone">
+        <div class="card-title">⚠ Zona de Emergencia</div>
+
+        <!--
+          CORRECCIÓN: Alerta visible cuando el contrato tiene BNB acumulado
+          (recibido por error vía receive()/fallback()). Se muestra dinámicamente
+          al cargar los balances. El botón de rescate se habilita según el balance
+          real del contrato, no solo al conectar sesión.
+        -->
+        <div class="bnb-alert" id="contractBnbAlert">
+          ⚠ El contrato tiene BNB acumulado (<span id="alertBnbAmount">0</span> BNB).
+          Puedes rescatarlos hacia tu wallet.
+        </div>
+
+        <p style="font-size:11px;color:var(--muted);font-family:var(--sans);margin-bottom:14px;line-height:1.6">
+          Retira todos los BNB atrapados en el contrato hacia tu wallet. Usar solo si hay fondos bloqueados.
+          El contrato acepta BNB por <code style="color:var(--accent)">receive()</code> y <code style="color:var(--accent)">fallback()</code>.
+        </p>
+        <button class="btn-danger btn-full" id="btnRescue" onclick="rescueFunds()" disabled>
+          Rescatar Fondos del Contrato
+        </button>
+      </div>
+
+      <!-- LOG -->
+      <div class="section-title">Log de Operaciones</div>
+      <div id="log"><span class="log-warn">[sistema] Panel listo. Conecta tu wallet.</span></div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ethers.js v5 — DEBE CARGAR ANTES DEL SCRIPT PRINCIPAL -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"
+        integrity="sha256-wDcjCSmkPflZpeWUFRHGMSm0iIMKCpRpEBdPDRUVFuk="
+        crossorigin="anonymous"></script>
+
+<script>
+// ============================================================
+// CONFIGURACIÓN — EDITAR AQUÍ
+// ============================================================
+const CONTRACT_ADDRESS = 'AQUÍ_TU_CONTRATO'; // <-- reemplazar
+
+// ============================================================
+// ABI (todas las funciones del contrato — SIN distribute/drainOwner)
+// Este panel NUNCA ejecuta pagos. Solo configura.
+// ============================================================
+const ABI = [
+  "function owner() view returns (address)",
+  "function departmentCount() view returns (uint256)",
+  "function sendAllMode() view returns (bool)",
+  "function calculateTotalNeeded() view returns (uint256)",
+  "function contractBalance() view returns (uint256)",
+  "function getConstants() view returns (uint256,uint256)",
+  "function getDepartmentInfo(uint256) view returns (string,uint256,uint256,uint256,bool,bool,uint256)",
+  "function getEmployees(uint256) view returns (address[])",
+  "function addDepartment(string,uint256,uint256,uint256,bool)",
+  "function updateDepartmentPayment(uint256,uint256,uint256,uint256,bool)",
+  "function setDepartmentActive(uint256,bool)",
+  "function addEmployee(uint256,address)",
+  "function addEmployeesBatch(uint256,address[])",
+  "function removeEmployee(uint256,uint256)",
+  "function toggleSendAllMode(bool)",
+  "function rescueFunds()",
+  "function transferOwnership(address)",
+  "event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)"
+];
+
+let provider, signer, contract, ownerAddr;
+
+// ============================================================
+// INIT: conexión manual (sin auto-distribución)
+// ============================================================
+window.addEventListener('load', () => {
+  updateExecPreview();
+  loadSavedConfig();
+
+  if (window.ethereum) {
+    // Reconexión silenciosa si ya hay sesión
+    window.ethereum.request({ method: 'eth_accounts' }).then(accounts => {
+      if (accounts && accounts.length > 0) initProvider(accounts);
+    });
+    window.ethereum.on('accountsChanged', () => location.reload());
+    window.ethereum.on('chainChanged',    () => location.reload());
+  }
+
+  document.getElementById('cfgAction').addEventListener('change', updateExecPreview);
+});
+
+async function connectWallet() {
+  if (!window.ethereum) {
+    addLog('No se detectó proveedor Web3.', 'err');
+    return;
+  }
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    await initProvider(accounts);
+  } catch (e) {
+    addLog('Conexión cancelada: ' + e.message, 'err');
+  }
+}
+
+async function initProvider(accounts) {
+  try {
+    provider  = new ethers.providers.Web3Provider(window.ethereum);
+    signer    = provider.getSigner();
+    ownerAddr = accounts[0];
+
+    const network = await provider.getNetwork();
+    if (network.chainId !== 56) {
+      document.getElementById('netWarn').style.display = 'block';
+      setWallet(`Red incorrecta (${network.chainId})`, 'warn');
+      addLog(`⚠ chainId ${network.chainId} — necesita BSC Mainnet (56)`, 'warn');
+    } else {
+      document.getElementById('netWarn').style.display = 'none';
+      setWallet(shortAddr(ownerAddr), 'ok');
+      addLog(`Wallet: ${ownerAddr}`, 'ok');
+    }
+
+    if (!ethers.utils.isAddress(CONTRACT_ADDRESS) || CONTRACT_ADDRESS === 'AQUÍ_TU_CONTRATO') {
+      addLog('CONTRACT_ADDRESS no configurado. Edita la constante en el script.', 'err');
+      return;
+    }
+
+    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+    const contractOwner = await contract.owner();
+
+    // CORRECCIÓN: mostrar el owner actual en la tarjeta de transferencia
+    document.getElementById('currentOwnerDisplay').textContent = contractOwner;
+
+    if (contractOwner.toLowerCase() !== ownerAddr.toLowerCase()) {
+      addLog(`⚠ Esta wallet no es el owner. Owner: ${contractOwner}`, 'warn');
+      setWallet(shortAddr(ownerAddr) + ' (no owner)', 'warn');
+    } else {
+      addLog('✓ Wallet verificada como owner del contrato.', 'ok');
+    }
+
+    await loadDepartments();
+    await refreshBalances();
+
+  } catch (e) {
+    addLog('Error al inicializar: ' + e.message, 'err');
+  }
+}
+
+// ============================================================
+// CARGAR DEPARTAMENTOS
+// ============================================================
+async function loadDepartments() {
+  if (!contract) return;
+  try {
+    const count  = (await contract.departmentCount()).toNumber();
+    const listEl = document.getElementById('deptList');
+    const selEmp = document.getElementById('empDeptSelect');
+    const selAct = document.getElementById('deptActionSelect');
+
+    listEl.innerHTML = '';
+    selEmp.innerHTML = '<option value="">— Seleccionar —</option>';
+    selAct.innerHTML = '<option value="">— Seleccionar —</option>';
+
+    for (let i = 0; i < count; i++) {
+      const info = await contract.getDepartmentInfo(i);
+      const [name, fixed, min, max, useRandom, active, empCount] = info;
+      const payStr = useRandom
+        ? `${fEth(min)}–${fEth(max)} BNB (rango)`
+        : `${fEth(fixed)} BNB (fijo)`;
+      const stag = active
+        ? '<span class="tag tag-ok">ACTIVO</span>'
+        : '<span class="tag tag-err">INACTIVO</span>';
+
+      listEl.innerHTML += `
+        <div class="dept-item">
+          <div class="dept-item-head">
+            <span class="dept-name">#${i} — ${name}</span>${stag}
+          </div>
+          <div class="dept-meta">
+            ${empCount} empleado${empCount !== 1 ? 's' : ''} &nbsp;·&nbsp; ${payStr}
+          </div>
+        </div>`;
+
+      selEmp.appendChild(new Option(`#${i} ${name} (${empCount})`, i));
+      selAct.appendChild(new Option(`#${i} ${name}`, i));
+    }
+
+    const sam = await contract.sendAllMode();
+    document.getElementById('sendAllStatus').textContent =
+      sam ? 'ACTIVO (distribución proporcional)' : 'INACTIVO (montos fijos/configurados)';
+    document.getElementById('sendAllStatus').style.color = sam ? 'var(--accent2)' : 'var(--muted)';
+
+    addLog(`${count} departamentos cargados.`, 'ok');
+  } catch (e) {
+    addLog('Error cargando departamentos: ' + e.message, 'err');
+  }
+}
+
+// ============================================================
+// REFRESCAR SALDOS
+// CORRECCIÓN: el botón rescueFunds se habilita/deshabilita según
+// el balance real del contrato, y muestra alerta si hay BNB acumulado.
+// ============================================================
+async function refreshBalances() {
+  try {
+    if (!provider || !ownerAddr) return;
+    const bal    = await provider.getBalance(ownerAddr);
+    const balBnb = parseFloat(ethers.utils.formatEther(bal));
+    document.getElementById('ownerBal').textContent = balBnb.toFixed(4) + ' BNB';
+
+    if (contract) {
+      const needed    = await contract.calculateTotalNeeded();
+      const neededBnb = parseFloat(ethers.utils.formatEther(needed));
+      document.getElementById('totalNeeded').textContent = neededBnb.toFixed(4) + ' BNB';
+
+      const cBal    = await contract.contractBalance();
+      const cBalBnb = parseFloat(ethers.utils.formatEther(cBal));
+      document.getElementById('contractBal').textContent = cBalBnb.toFixed(4) + ' BNB';
+
+      // CORRECCIÓN: habilitar/deshabilitar el botón de rescate según el
+      // balance real del contrato, no solo según si la sesión está iniciada.
+      const btnRescue = document.getElementById('btnRescue');
+      const alert     = document.getElementById('contractBnbAlert');
+
+      if (cBalBnb > 0) {
+        btnRescue.disabled = false;
+        alert.style.display = 'block';
+        document.getElementById('alertBnbAmount').textContent = cBalBnb.toFixed(6);
+      } else {
+        btnRescue.disabled = true;
+        alert.style.display = 'none';
+      }
+
+      if (neededBnb > 0) {
+        document.getElementById('progressWrap').style.display = 'block';
+        const pct = Math.min((balBnb / neededBnb) * 100, 100);
+        const bar = document.getElementById('progressBar');
+        bar.style.width      = pct + '%';
+        bar.style.background = pct >= 100 ? 'var(--accent2)' : 'var(--danger)';
+      }
+    }
+  } catch (e) { /* silencioso */ }
+}
+
+// ============================================================
+// GESTIÓN DE DEPARTAMENTOS
+// ============================================================
+async function addDepartment() {
+  if (!contract) { addLog('Conecta tu wallet primero.', 'warn'); return; }
+  const name   = document.getElementById('newDeptName').value.trim();
+  const isRand = document.getElementById('newDeptRandom').checked;
+  const fixed  = document.getElementById('newDeptFixed').value || '0';
+  const min    = document.getElementById('newDeptMin').value   || '0';
+  const max    = document.getElementById('newDeptMax').value   || '0';
+  if (!name) { addLog('Escribe un nombre de departamento.', 'warn'); return; }
+  try {
+    addLog(`Creando departamento "${name}"...`, '');
+    const tx = await contract.addDepartment(
+      name,
+      ethers.utils.parseEther(fixed),
+      ethers.utils.parseEther(min),
+      ethers.utils.parseEther(max),
+      isRand
+    );
+    await tx.wait();
+    addLog(`✓ Departamento "${name}" creado. TX: ${shortHash(tx.hash)}`, 'ok');
+    document.getElementById('newDeptName').value = '';
+    await loadDepartments();
+    await refreshBalances();
+  } catch (e) { addLog('Error: ' + (e.reason || e.message), 'err'); }
+}
+
+async function updateDeptPayment() {
+  if (!contract) { addLog('Conecta tu wallet primero.', 'warn'); return; }
+  const deptId = document.getElementById('deptActionSelect').value;
+  const isRand = document.getElementById('updRandom').checked;
+  const fixed  = document.getElementById('updFixed').value || '0';
+  const min    = document.getElementById('updMin').value   || '0';
+  const max    = document.getElementById('updMax').value   || '0';
+  if (deptId === '') { addLog('Selecciona un departamento.', 'warn'); return; }
+  try {
+    const tx = await contract.updateDepartmentPayment(
+      deptId,
+      ethers.utils.parseEther(fixed),
+      ethers.utils.parseEther(min),
+      ethers.utils.parseEther(max),
+      isRand
+    );
+    await tx.wait();
+    addLog(`✓ Pago del departamento #${deptId} actualizado.`, 'ok');
+    await loadDepartments();
+    await refreshBalances();
+  } catch (e) { addLog('Error: ' + (e.reason || e.message), 'err'); }
+}
+
+async function setDeptActive(active) {
+  if (!contract) { addLog('Conecta tu wallet primero.', 'warn'); return; }
+  const deptId = document.getElementById('deptActionSelect').value;
+  if (deptId === '') { addLog('Selecciona un departamento.', 'warn'); return; }
+  try {
+    const tx = await contract.setDepartmentActive(deptId, active);
+    await tx.wait();
+    addLog(`✓ Departamento #${deptId} ${active ? 'activado' : 'desactivado'}.`, 'ok');
+    await loadDepartments();
+  } catch (e) { addLog('Error: ' + (e.reason || e.message), 'err'); }
+}
+
+// ============================================================
+// GESTIÓN DE EMPLEADOS
+// ============================================================
+async function loadEmployeeList() {
+  if (!contract) return;
+  const deptId = document.getElementById('empDeptSelect').value;
+  if (deptId === '') {
+    document.getElementById('empListContainer').style.display = 'none';
+    return;
+  }
+  document.getElementById('empListContainer').style.display = 'block';
+  try {
+    const emps = await contract.getEmployees(deptId);
+    const el   = document.getElementById('empList');
+    if (emps.length === 0) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:10px;padding:4px 0">Sin empleados en este departamento.</div>';
+      return;
+    }
+    el.innerHTML = emps.map((addr, i) =>
+      `<div class="emp-item">
+        <span class="emp-addr">${addr}</span>
+        <button class="emp-rm" onclick="removeEmployee(${deptId},${i})" title="Eliminar">✕</button>
+      </div>`
+    ).join('');
+  } catch (e) { addLog('Error cargando empleados: ' + e.message, 'err'); }
+}
+
+async function addEmployee() {
+  if (!contract) { addLog('Conecta tu wallet primero.', 'warn'); return; }
+  const deptId = document.getElementById('empDeptSelect').value;
+  const addr   = document.getElementById('newEmpAddr').value.trim();
+  if (!ethers.utils.isAddress(addr)) { addLog('Dirección inválida.', 'warn'); return; }
+  try {
+    const tx = await contract.addEmployee(deptId, addr);
+    await tx.wait();
+    addLog(`✓ Empleado ${shortAddr(addr)} añadido al departamento #${deptId}.`, 'ok');
+    document.getElementById('newEmpAddr').value = '';
+    await loadEmployeeList();
+    await refreshBalances();
+  } catch (e) { addLog('Error: ' + (e.reason || e.message), 'err'); }
+}
+
+async function addEmployeesBatch() {
+  if (!contract) { addLog('Conecta tu wallet primero.', 'warn'); return; }
+  const deptId = document.getElementById('empDeptSelect').value;
+  const raw    = document.getElementById('batchEmpAddrs').value.trim();
+  const addrs  = raw.split('\n').map(a => a.trim()).filter(a => ethers.utils.isAddress(a));
+  if (addrs.length === 0) { addLog('No hay direcciones válidas en el textarea.', 'warn'); return; }
+  try {
+    const tx = await contract.addEmployeesBatch(deptId, addrs);
+    await tx.wait();
+    addLog(`✓ ${addrs.length} empleados añadidos al departamento #${deptId}.`, 'ok');
+    document.getElementById('batchEmpAddrs').value = '';
+    await loadEmployeeList();
+    await refreshBalances();
+  } catch (e) { addLog('Error: ' + (e.reason || e.message), 'err'); }
+}
+
+async function removeEmployee(deptId, idx) {
+  if (!contract) return;
+  if (!confirm('¿Eliminar este empleado del departamento?')) return;
+  try {
+    const tx = await contract.removeEmployee(deptId, idx);
+    await tx.wait();
+    addLog(`✓ Empleado #${idx} eliminado del departamento #${deptId}.`, 'ok');
+    await loadEmployeeList();
+    await refreshBalances();
+  } catch (e) { addLog('Error: ' + (e.reason || e.message), 'err'); }
+}
+
+// ============================================================
+// MODO SEND ALL
+// ============================================================
+async function toggleSendAll(enabled) {
+  if (!contract) { addLog('Conecta tu wallet primero.', 'warn'); return; }
+  try {
+    const tx = await contract.toggleSendAllMode(enabled);
+    await tx.wait();
+    addLog(`✓ Send All Mode ${enabled ? 'activado' : 'desactivado'}.`, 'ok');
+    await loadDepartments();
+  } catch (e) { addLog('Error: ' + (e.reason || e.message), 'err'); }
+}
+
+// ============================================================
+// RESCATE DE EMERGENCIA
+// Recupera BNB acumulado en el contrato (recibido por error vía
+// receive()/fallback()). Solo disponible si hay fondos en el contrato.
+// ============================================================
+async function rescueFunds() {
+  if (!contract) return;
+  if (!confirm('¿Rescatar todos los fondos del contrato a tu wallet?')) return;
+  try {
+    addLog('Iniciando rescate de fondos...', '');
+    const tx = await contract.rescueFunds();
+    await tx.wait();
+    addLog('✓ Fondos rescatados correctamente. TX: ' + shortHash(tx.hash), 'ok');
+    await refreshBalances();
+  } catch (e) { addLog('Error al rescatar: ' + (e.reason || e.message), 'err'); }
+}
+
+// ============================================================
+// TRANSFERIR OWNERSHIP
+// CORRECCIÓN:
+// - Se muestra el owner actual antes de ejecutar (en el HTML).
+// - Se verifica que la nueva dirección no sea la misma que el owner actual.
+// - Tras la transferencia, se recarga la página para reflejar el
+//   nuevo estado (la wallet actual ya no es owner).
+// ============================================================
+async function transferOwnership() {
+  if (!contract) { addLog('Conecta tu wallet primero.', 'warn'); return; }
+  const newOwner = document.getElementById('newOwnerAddr').value.trim();
+
+  if (!ethers.utils.isAddress(newOwner)) {
+    addLog('Dirección inválida.', 'warn');
+    return;
+  }
+
+  // Verificar que no sea el mismo owner actual
+  try {
+    const currentOwner = await contract.owner();
+    if (newOwner.toLowerCase() === currentOwner.toLowerCase()) {
+      addLog('⚠ La nueva dirección ya es el owner actual.', 'warn');
+      return;
+    }
+  } catch (e) {
+    addLog('Error verificando owner actual: ' + e.message, 'err');
+    return;
+  }
+
+  if (!confirm(
+    `¿Transferir ownership a:\n${newOwner}\n\n` +
+    `Esta acción es IRREVERSIBLE desde tu wallet actual.\n` +
+    `Tras confirmar, perderás todos los permisos administrativos.`
+  )) return;
+
+  try {
+    addLog(`Transfiriendo ownership a ${shortAddr(newOwner)}...`, '');
+    const tx = await contract.transferOwnership(newOwner);
+    await tx.wait();
+    addLog(`✓ Ownership transferido a ${shortAddr(newOwner)}. TX: ${shortHash(tx.hash)}`, 'ok');
+    document.getElementById('newOwnerAddr').value = '';
+
+    // CORRECCIÓN: recargar la página tras la transferencia para que el
+    // panel refleje que la wallet actual ya no es el owner del contrato.
+    addLog('⚠ Tu wallet ya no es el owner. Recargando panel...', 'warn');
+    setTimeout(() => location.reload(), 2500);
+  } catch (e) { addLog('Error: ' + (e.reason || e.message), 'err'); }
+}
+
+// ============================================================
+// CONFIGURACIÓN DEL BOTÓN DE EJECUCIÓN (localStorage)
+// ============================================================
+function updateExecPreview() {
+  const action = document.getElementById('cfgAction').value;
+  document.getElementById('previewAction').textContent = action + '()';
+}
+
+function loadSavedConfig() {
+  const saved = localStorage.getItem('execConfig');
+  if (!saved) return;
+  try {
+    const cfg = JSON.parse(saved);
+    if (cfg.action) document.getElementById('cfgAction').value = cfg.action;
+    updateExecPreview();
+  } catch (_) { /* ignorar */ }
+}
+
+function saveExecConfig() {
+  const action = document.getElementById('cfgAction').value;
+  const cfg    = { action, contractAddress: CONTRACT_ADDRESS };
+  localStorage.setItem('execConfig', JSON.stringify(cfg));
+
+  const notice = document.getElementById('savedNotice');
+  notice.style.display = 'block';
+  setTimeout(() => { notice.style.display = 'none'; }, 3000);
+  addLog(`✓ Configuración guardada: acción → ${action}()`, 'ok');
+}
+
+// ============================================================
+// HELPERS UI
+// ============================================================
+function toggleRandomFields() {
+  const r = document.getElementById('newDeptRandom').checked;
+  document.getElementById('fixedFields').style.display  = r ? 'none'  : 'block';
+  document.getElementById('randomFields').style.display = r ? 'block' : 'none';
+}
+function toggleUpdateRandom() {
+  const r = document.getElementById('updRandom').checked;
+  document.getElementById('updFixedArea').style.display  = r ? 'none'  : 'block';
+  document.getElementById('updRandomArea').style.display = r ? 'block' : 'none';
+}
+function setWallet(label, type) {
+  document.getElementById('walletLabel').textContent = label;
+  const dot = document.getElementById('dot');
+  dot.className = 'dot' + (type === 'ok' ? ' ok' : type === 'warn' ? ' warn' : '');
+}
+function addLog(msg, type) {
+  const el  = document.getElementById('log');
+  const cls = type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : type === 'warn' ? 'log-warn' : '';
+  const t   = new Date().toLocaleTimeString('es', { hour12: false });
+  el.innerHTML += `<div class="${cls}">[${t}] ${msg}</div>`;
+  el.scrollTop  = el.scrollHeight;
+}
+function shortAddr(a) { return a.slice(0,6) + '…' + a.slice(-4); }
+function shortHash(h) { return h.slice(0,10) + '…'; }
+function fEth(wei)    { return parseFloat(ethers.utils.formatEther(wei)).toFixed(4); }
+</script>
+</body>
+</html>

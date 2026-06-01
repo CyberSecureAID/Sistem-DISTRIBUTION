@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Execute — RewardDistributor</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg:      #080a0d;
+    --surface: #0e1117;
+    --border:  #1a2030;
+    --accent:  #e8b84b;
+    --accent2: #38d9a9;
+    --danger:  #e05252;
+    --info:    #5b8dee;
+    --text:    #dde3ed;
+    --muted:   #4a5568;
+    --mono:    'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    font-family: var(--mono);
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ---- CONNECT BUTTON — top right ---- */
+  #connectBtn {
+    position: fixed;
+    top: 18px;
+    right: 24px;
+    z-index: 200;
+    padding: 0 20px;
+    height: 38px;
+    border-radius: 4px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background .15s, color .15s, box-shadow .15s, transform .1s;
+  }
+  #connectBtn:hover:not(:disabled) {
+    background: var(--accent);
+    color: #000;
+    box-shadow: 0 0 20px rgba(232,184,75,.3);
+  }
+  #connectBtn:active:not(:disabled) { transform: scale(.97); }
+  #connectBtn:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+    border-color: var(--muted);
+    color: var(--muted);
+  }
+  #connectBtn.loading {
+    border-color: var(--info);
+    color: var(--info);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  #connectBtn.success {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    background: rgba(56,217,169,.08);
+    box-shadow: 0 0 20px rgba(56,217,169,.2);
+  }
+  #connectBtn.error {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: rgba(224,82,82,.06);
+  }
+  @keyframes pulse {
+    0%,100% { opacity: .6; }
+    50%      { opacity: 1; }
+  }
+
+  /* ---- WALLET INDICATOR — top left ---- */
+  .wallet-bar {
+    position: fixed;
+    top: 18px;
+    left: 24px;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: .5px;
+  }
+  .wallet-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--danger);
+    flex-shrink: 0;
+    transition: background .3s;
+  }
+  .wallet-dot.ok   { background: var(--accent2); }
+  .wallet-dot.warn { background: var(--accent); }
+
+  /* ---- NET WARN — top banner ---- */
+  #netWarn {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 150;
+    background: #1e1500;
+    border-bottom: 1px solid var(--accent);
+    padding: 8px 24px;
+    font-size: 11px;
+    color: var(--accent);
+    text-align: center;
+    letter-spacing: .5px;
+  }
+
+  /* ---- CENTER AREA ---- */
+  .center {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    gap: 16px;
+    pointer-events: none;
+  }
+
+  .sys-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .amount-display { text-align: center; }
+  .amount-val {
+    font-size: 42px;
+    font-weight: 300;
+    color: var(--text);
+    letter-spacing: -1px;
+    line-height: 1;
+    transition: color .3s;
+  }
+  .amount-unit {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .divider {
+    width: 1px;
+    height: 30px;
+    background: var(--border);
+  }
+
+  #statusLine {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: .5px;
+    text-align: center;
+    min-height: 16px;
+    max-width: 400px;
+    line-height: 1.5;
+    pointer-events: none;
+    transition: color .2s;
+  }
+  #statusLine.ok   { color: var(--accent2); }
+  #statusLine.warn { color: var(--accent); }
+  #statusLine.err  { color: var(--danger); }
+
+  #deptSummary {
+    font-size: 9px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 2;
+    letter-spacing: .5px;
+    max-width: 340px;
+  }
+  #deptSummary span { color: var(--text); }
+
+  #txResult {
+    display: none;
+    text-align: center;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  #txLink {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 10px;
+    pointer-events: all;
+  }
+  #txLink:hover { text-decoration: underline; }
+
+  /* ---- SPINNER para estado loading ---- */
+  .spinner {
+    display: none;
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--info);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  #connectBtn.loading ~ .center .spinner { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- NO PROVIDER OVERLAY ---- */
+  #noProviderOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8,10,13,.92);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    gap: 16px;
+    backdrop-filter: blur(4px);
+  }
+  #noProviderOverlay .ovl-title {
+    font-size: 12px;
+    color: var(--text);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  #noProviderOverlay p {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    max-width: 280px;
+    line-height: 1.7;
+  }
+  #noProviderOverlay a {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 11px;
+    border: 1px solid var(--accent);
+    padding: 8px 20px;
+    border-radius: 4px;
+    transition: background .15s, color .15s;
+  }
+  #noProviderOverlay a:hover {
+    background: var(--accent);
+    color: #000;
+  }
+</style>
+</head>
+<body>
+
+<!-- WALLET INDICATOR -->
+<div class="wallet-bar">
+  <div class="wallet-dot" id="wDot"></div>
+  <span id="wLabel">Iniciando...</span>
+</div>
+
+<!-- NET WARN BANNER -->
+<div id="netWarn">⚠ Red incorrecta. Este contrato opera en BNB Smart Chain (chainId 56). Cambia de red en tu wallet.</div>
+
+<!-- CONNECT / EXECUTE BUTTON -->
+<button id="connectBtn" disabled>CONNECT WALLET</button>
+
+<!-- CENTER INFO -->
+<div class="center">
+  <div class="sys-label">RewardDistributor</div>
+  <div class="amount-display">
+    <div class="amount-val" id="amountVal">—</div>
+    <div class="amount-unit">BNB a distribuir</div>
+  </div>
+  <div class="divider"></div>
+  <div id="deptSummary">Conectando...</div>
+  <div id="statusLine">Inicializando...</div>
+  <div id="txResult">
+    <div id="txHash" style="margin-bottom:4px;color:var(--muted);font-size:10px"></div>
+    <a id="txLink" href="#" target="_blank" rel="noopener noreferrer">Ver en BscScan →</a>
+  </div>
+</div>
+
+<!-- SIN PROVIDER WEB3 -->
+<div id="noProviderOverlay">
+  <div class="ovl-title">No se detectó Web3</div>
+  <p>Instala MetaMask u otra wallet compatible con Web3 para continuar.</p>
+  <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer">Instalar MetaMask</a>
+</div>
+
+<!--
+  ethers.js v5 — carga antes que los módulos ES.
+  Los módulos lo usan como global (window.ethers) ya que ethers UMD
+  no es un ES module y no puede importarse con import().
+-->
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"
+        integrity="sha256-wDcjCSmkPflZpeWUFRHGMSm0iIMKCpRpEBdPDRUVFuk="
+        crossorigin="anonymous"></script>
+
+<!--
+  Punto de entrada — todo el comportamiento del botón
+  está encapsulado en ui/execute-btn.js.
+-->
+<script type="module">
+  import { initExecuteBtn } from './ui/execute-btn.js';
+  initExecuteBtn();
+</script>
+
+</body>
+</html>
